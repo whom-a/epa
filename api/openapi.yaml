@@ -1,0 +1,33 @@
+openapi: 3.0.3
+info:
+  title: EPA (Event Posting App) API
+  version: 1.0.0
+servers:
+- url: /
+paths:
+  /status:
+    get:
+      operationId: get_status
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Status"
+          description: API is healthy
+      summary: Check API health
+components:
+  schemas:
+    Status:
+      example:
+        version: version
+        status: status
+      properties:
+        status:
+          title: status
+          type: string
+        version:
+          title: version
+          type: string
+      title: Status
+      type: object
