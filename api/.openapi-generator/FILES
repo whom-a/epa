@@ -4,9 +4,7 @@ Dockerfile
 README.md
 openapi.yaml
 pyproject.toml
-requirements.txt
 setup.cfg
-src/epa_api/api_implementation/__init__.py
 src/epa_api/apis/__init__.py
 src/epa_api/apis/authentication_api.py
 src/epa_api/apis/authentication_api_base.py

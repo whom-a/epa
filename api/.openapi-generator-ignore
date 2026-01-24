@@ -23,3 +23,7 @@
 #!docs/README.md
 
 docker-compose.yaml
+Dockerfile
+src/epa_api/api_implementation/**
+api_implementation/**
+requirements.txt
