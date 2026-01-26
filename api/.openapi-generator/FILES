@@ -9,7 +9,6 @@ src/epa_api/apis/authentication_api.py
 src/epa_api/apis/authentication_api_base.py
 src/epa_api/apis/system_api.py
 src/epa_api/apis/system_api_base.py
-src/epa_api/main.py
 src/epa_api/models/__init__.py
 src/epa_api/models/apple_token_exchange.py
 src/epa_api/models/auth_token.py

@@ -34,8 +34,8 @@ class AuthToken(BaseModel):
     access_token: Optional[StrictStr] = None
     session_token: Optional[StrictStr] = None
     token_type: Optional[StrictStr] = None
-    expires_in: Optional[StrictInt] = None
-    __properties: ClassVar[List[str]] = ["access_token", "session_token", "token_type", "expires_in"]
+    access_expires_in: Optional[StrictInt] = None
+    __properties: ClassVar[List[str]] = ["access_token", "session_token", "token_type", "access_expires_in"]
 
     model_config = {
         "populate_by_name": True,
@@ -89,7 +89,7 @@ class AuthToken(BaseModel):
             "access_token": obj.get("access_token"),
             "session_token": obj.get("session_token"),
             "token_type": obj.get("token_type"),
-            "expires_in": obj.get("expires_in")
+            "access_expires_in": obj.get("access_expires_in")
         })
         return _obj
 

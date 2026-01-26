@@ -235,9 +235,9 @@ components:
           example: Bearer
           title: token_type
           type: string
-        expires_in:
+        access_expires_in:
           example: 3600
-          title: expires_in
+          title: access_expires_in
           type: integer
       title: AuthToken
       type: object

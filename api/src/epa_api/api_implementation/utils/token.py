@@ -8,7 +8,46 @@ import os
 
 class TokenUtils:
     """A class with helpful methods to interact with API JWT Tokens"""
-    
+            
+    @staticmethod
+    def is_access_token_in_db(token: str, user_collection: Collection) -> bool:
+        """
+        Checks if the current access token is in the database.
+        This is used to handle if a user creates a new access token, invalidating previous ones.
+        
+        :param token: The access token to look for.
+        :type token: str
+        :param session_token_collection: The collection of session tokens
+        :type session_token_collection: pymongo.collection.Collection
+        :return: True if and only if the session token is in the database
+        :rtype: bool       
+        """
+        
+        # Access tokens only exist in one spot, with the user info.
+        if user_collection.find_one({"access_token": token}):
+            return True
+        else:
+            return False        
+        
+    @staticmethod
+    def is_session_token_in_db(token: str, session_token_collection: Collection) -> bool:
+        """
+        Checks if the current session token is in the database.
+        This is used to handle if a user opens mutiple session tokens, invalidating previous ones.
+        
+        :param token: The session token to look for
+        :type token: str
+        :param session_token_collection: The collection of session tokens
+        :type session_token_collection: pymongo.collection.Collection
+        :return: True if and only if the session token is in the database
+        :rtype: bool       
+        """
+        
+        if session_token_collection.find_one({"session_token": token}):
+            return True
+        else:
+            return False
+            
     @staticmethod       
     def get_user_session_tokens(user_id: str, session_token_collection: Collection) -> List[Dict[Any, Any]]:
         """

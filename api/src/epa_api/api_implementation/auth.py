@@ -76,18 +76,23 @@ class AuthAPIImplementation(BaseAuthenticationApi):
             access_token=new_access_token,
             session_token=new_session_token,
             token_type="Bearer",
-            expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
+            access_expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
         )
         
     async def renew_session_token(self) -> AuthToken:
         
         token = current_token_data.get()
         
-        # This should never be executed since the security api handles invalid tokens
+        # Only executed if the context of this request is reset somehow
         if not token:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication Token lost")
             
+        # Make sure this session token was not invalidated early
         client, db = MongoUtils.get_mongodb_database_connection()
+        session_token_collection = MongoUtils.get_session_tokens_collection(db)
+        if not TokenUtils.is_session_token_in_db(token.sub, session_token_collection):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid Session")
+            
         user_collection = MongoUtils.get_user_collection(db)
         user = UserUtils.get_user_from_user_id(TokenUtils.get_user_id(token.sub), user_collection)
         if not user:
@@ -100,5 +105,5 @@ class AuthAPIImplementation(BaseAuthenticationApi):
             access_token=new_access_token,
             session_token=token.sub,
             token_type="Bearer",
-            expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
+            access_expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
         )
