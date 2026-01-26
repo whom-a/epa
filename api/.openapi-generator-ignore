@@ -27,3 +27,5 @@ Dockerfile
 src/epa_api/api_implementation/**
 api_implementation/**
 requirements.txt
+src/epa_api/security_api.py
+src/epa_api/main.py

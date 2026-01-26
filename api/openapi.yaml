@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   description: |
-    API for a mobile safety application that allows users to post and subscribe  to local safety concerns.
+    API for a mobile safety application that allows users to post and subscribe to local safety concerns.
   title: EPA (Event Posting App) API
   version: 1.0.0
 servers:
@@ -37,7 +37,11 @@ paths:
               $ref: "#/components/schemas/UserRegistration"
         required: true
       responses:
-        "201":
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserCreated"
           description: User created successfully
       summary: Register a new user
       tags:
@@ -58,7 +62,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthToken"
-          description: Successful authentication returns access and refresh tokens.
+          description: Successful authentication returns access and a session token.
       summary: Login with email/password
       tags:
       - Authentication
@@ -78,7 +82,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthToken"
-          description: Successful authentication returns access and refresh tokens.
+          description: Successful authentication returns access and session token.
       summary: Google OAuth2 Exchange
       tags:
       - Authentication
@@ -98,28 +102,24 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthToken"
-          description: Successful authentication returns access and refresh tokens.
+          description: Successful authentication returns access and session token.
       summary: Apple Sign-In Exchange
       tags:
       - Authentication
-  /v1/auth/refresh:
+  /v1/auth/session:
     post:
-      description: Uses a refresh token to generate a new short-lived access JWT.
-      operationId: refresh_session_token
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/RefreshTokenRequest"
-        required: true
+      description: Uses a session token to generate a new short-lived access JWT.
+      operationId: renew_session_token
       responses:
         "200":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthToken"
-          description: Successful authentication returns access and refresh tokens.
-      summary: Refresh Access Token
+          description: Successful authentication returns access and a session token.
+      security:
+      - BearerAuth: []
+      summary: Session Token Renewal
       tags:
       - Authentication
 components:
@@ -129,7 +129,7 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/AuthToken"
-      description: Successful authentication returns access and refresh tokens.
+      description: Successful authentication returns access and a session token.
   schemas:
     Status:
       example:
@@ -174,6 +174,7 @@ components:
           title: email
           type: string
         password:
+          format: password
           title: password
           type: string
       required:
@@ -183,54 +184,52 @@ components:
       type: object
     SocialTokenExchange:
       example:
-        idToken: idToken
+        id_token: id_token
       properties:
-        idToken:
+        id_token:
           description: Token from social provider SDK.
-          title: idToken
+          title: id_token
           type: string
       required:
-      - idToken
+      - id_token
       title: SocialTokenExchange
       type: object
     AppleTokenExchange:
       example:
-        identityToken: identityToken
-        fullName: fullName
+        identity_token: identity_token
+        full_name: full_name
       properties:
-        identityToken:
-          title: identityToken
+        identity_token:
+          title: identity_token
           type: string
-        fullName:
-          title: fullName
+        full_name:
+          title: full_name
           type: string
       required:
       - identityToken
       title: AppleTokenExchange
       type: object
-    RefreshTokenRequest:
+    UserCreated:
       example:
-        refreshToken: refreshToken
+        user_id: some_user_id
       properties:
-        refreshToken:
-          title: refreshToken
+        user_id:
+          title: user_id
           type: string
-      required:
-      - refreshToken
-      title: RefreshTokenRequest
+      title: UserCreated
       type: object
     AuthToken:
       example:
         access_token: access_token
-        refresh_token: refresh_token
+        session_token: session_token
         token_type: Bearer
         expires_in: 3600
       properties:
         access_token:
           title: access_token
           type: string
-        refresh_token:
-          title: refresh_token
+        session_token:
+          title: session_token
           type: string
         token_type:
           example: Bearer
@@ -246,6 +245,6 @@ components:
     BearerAuth:
       bearerFormat: JWT
       description: |
-        Enter your JWT access token. This allows the RESTful API to verify  your identity before allowing posts or subscriptions.
+        Enter your JWT access token. This allows the RESTful API to verify your identity before allowing posts or subscriptions.
       scheme: bearer
       type: http

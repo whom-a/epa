@@ -23,14 +23,13 @@ from fastapi import (  # noqa: F401
 )
 
 from epa_api.models.extra_models import TokenModel  # noqa: F401
-from typing import Any
 from epa_api.models.apple_token_exchange import AppleTokenExchange
 from epa_api.models.auth_token import AuthToken
 from epa_api.models.login_request import LoginRequest
-from epa_api.models.refresh_token_request import RefreshTokenRequest
 from epa_api.models.social_token_exchange import SocialTokenExchange
+from epa_api.models.user_created import UserCreated
 from epa_api.models.user_registration import UserRegistration
-
+from epa_api.security_api import get_token_BearerAuth
 
 router = APIRouter()
 
@@ -42,7 +41,7 @@ for _, name, _ in pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + "."):
 @router.post(
     "/v1/auth/register",
     responses={
-        201: {"description": "User created successfully"},
+        200: {"model": UserCreated, "description": "User created successfully"},
     },
     tags=["Authentication"],
     summary="Register a new user",
@@ -50,7 +49,7 @@ for _, name, _ in pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + "."):
 )
 async def register_new_user(
     user_registration: UserRegistration = Body(None, description=""),
-) -> None:
+) -> UserCreated:
     """Creates a user account. Users must be authenticated via email to avoid spam."""
     if not BaseAuthenticationApi.subclasses:
         raise HTTPException(status_code=500, detail="Not implemented")
@@ -60,7 +59,7 @@ async def register_new_user(
 @router.post(
     "/v1/auth/login",
     responses={
-        200: {"model": AuthToken, "description": "Successful authentication returns access and refresh tokens."},
+        200: {"model": AuthToken, "description": "Successful authentication returns access and a session token."},
     },
     tags=["Authentication"],
     summary="Login with email/password",
@@ -78,7 +77,7 @@ async def login_with_password(
 @router.post(
     "/v1/auth/social/google",
     responses={
-        200: {"model": AuthToken, "description": "Successful authentication returns access and refresh tokens."},
+        200: {"model": AuthToken, "description": "Successful authentication returns access and session token."},
     },
     tags=["Authentication"],
     summary="Google OAuth2 Exchange",
@@ -96,7 +95,7 @@ async def authenticate_with_google(
 @router.post(
     "/v1/auth/social/apple",
     responses={
-        200: {"model": AuthToken, "description": "Successful authentication returns access and refresh tokens."},
+        200: {"model": AuthToken, "description": "Successful authentication returns access and session token."},
     },
     tags=["Authentication"],
     summary="Apple Sign-In Exchange",
@@ -112,18 +111,20 @@ async def authenticate_with_apple(
 
 
 @router.post(
-    "/v1/auth/refresh",
+    "/v1/auth/session",
     responses={
-        200: {"model": AuthToken, "description": "Successful authentication returns access and refresh tokens."},
+        200: {"model": AuthToken, "description": "Successful authentication returns access and a session token."},
     },
     tags=["Authentication"],
-    summary="Refresh Access Token",
+    summary="Session Token Renewal",
     response_model_by_alias=True,
 )
-async def refresh_session_token(
-    refresh_token_request: RefreshTokenRequest = Body(None, description=""),
+async def renew_session_token(
+    token_BearerAuth: TokenModel = Security(
+        get_token_BearerAuth
+    ),
 ) -> AuthToken:
-    """Uses a refresh token to generate a new short-lived access JWT."""
+    """Uses a session token to generate a new short-lived access JWT."""
     if not BaseAuthenticationApi.subclasses:
         raise HTTPException(status_code=500, detail="Not implemented")
-    return await BaseAuthenticationApi.subclasses[0]().refresh_session_token(refresh_token_request)
+    return await BaseAuthenticationApi.subclasses[0]().renew_session_token()

@@ -2,14 +2,13 @@
 
 from typing import ClassVar, Dict, List, Tuple  # noqa: F401
 
-from typing import Any
 from epa_api.models.apple_token_exchange import AppleTokenExchange
 from epa_api.models.auth_token import AuthToken
 from epa_api.models.login_request import LoginRequest
-from epa_api.models.refresh_token_request import RefreshTokenRequest
 from epa_api.models.social_token_exchange import SocialTokenExchange
+from epa_api.models.user_created import UserCreated
 from epa_api.models.user_registration import UserRegistration
-
+from epa_api.security_api import get_token_BearerAuth
 
 class BaseAuthenticationApi:
     subclasses: ClassVar[Tuple] = ()
@@ -20,7 +19,7 @@ class BaseAuthenticationApi:
     async def register_new_user(
         self,
         user_registration: UserRegistration,
-    ) -> None:
+    ) -> UserCreated:
         """Creates a user account. Users must be authenticated via email to avoid spam."""
         ...
 
@@ -49,9 +48,8 @@ class BaseAuthenticationApi:
         ...
 
 
-    async def refresh_session_token(
+    async def renew_session_token(
         self,
-        refresh_token_request: RefreshTokenRequest,
     ) -> AuthToken:
-        """Uses a refresh token to generate a new short-lived access JWT."""
+        """Uses a session token to generate a new short-lived access JWT."""
         ...
