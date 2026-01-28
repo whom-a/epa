@@ -15,7 +15,7 @@ jobs:
       - run: echo "This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "PR from ${{ github.head_ref }} into ${{ github.base_ref }} in ${{ github.repository }}."
 
-      # 2) Checkout the branch that is making the pull request (head branch)
+      # Checkout the branch that is making the pull request (head branch)
       - name: Check out pull request
         uses: actions/checkout@v5
         with:
@@ -29,16 +29,36 @@ jobs:
         run: |
           ls ${{ github.workspace }}
 
-      # 3) Build containers that the API needs
-      - name: Build dependency containers
-        run: |
-          docker compose version
-          docker compose build
-
-      # 4) Build the API (expects an api/directory with a Dockerfile)
+      # Build the API (expects an api/directory with a Dockerfile)
       - name: Build the API image
         run: |
-          docker version
-          docker build -t api:ci ./api
+          docker compose -f ./docker-compose.yml build epa_api
 
-      - run: echo "This job's status is ${{ job.status }}."
+      #  Set up Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Check Docker
+      - name: Check Docker and Docker Compose
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Docker version:"
+          docker --version
+
+          # Prefer Compose v2 plugin: `docker compose`
+          if docker compose version >/dev/null 2>&1; then
+            echo "Docker Compose v2 is available:"
+            docker compose version
+          else
+            echo "Docker Compose v2 not found. Installing docker-compose-plugin..."
+            sudo apt-get update
+            sudo apt-get install -y docker-compose-plugin
+            docker compose version
+          fi
+
+      # Build epa_api container
+      - name: Build the API image
+        run: |
+          docker compose -f ./docker-compose.yml build epa_api
