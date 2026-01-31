@@ -66,30 +66,72 @@ paths:
       summary: Login with email/password
       tags:
       - Authentication
-  /v1/auth/social/google:
-    post:
-      description: Exchanges a Google ID Token for an EPA-issued JWT.
-      operationId: authenticate_with_google
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SocialTokenExchange"
+  /v1/auth/social/web/google:
+    get:
+      description: Redirects the user to Google's OAuth 2.0 server to begin authentication.
+      operationId: authenticate_with_google_web
+      responses:
+        "302":
+          description: Redirect to Google Accounts.
+          headers:
+            Location:
+              description: The Google OAuth2 authorization URL.
+              explode: false
+              schema:
+                type: string
+              style: simple
+      summary: Initiate Google OAuth2 Flow
+      tags:
+      - Authentication
+  /v1/auth/social/web/google/callback:
+    get:
+      description: "The endpoint Google redirects to after user authorization. It\
+        \ exchanges the 'code' for a Google token, identifies the user, and issues\
+        \ an EPA session."
+      operationId: google_callback
+      parameters:
+      - description: The authorization code provided by Google.
+        explode: true
+        in: query
+        name: code
         required: true
+        schema:
+          type: string
+        style: form
+      - description: A state string used to prevent CSRF.
+        explode: true
+        in: query
+        name: state
+        required: false
+        schema:
+          type: string
+        style: form
+      - description: Error message if the user denied the request.
+        explode: true
+        in: query
+        name: error
+        required: false
+        schema:
+          type: string
+        style: form
       responses:
         "200":
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthToken"
-          description: Successful authentication returns access and session token.
-      summary: Google OAuth2 Exchange
+          description: Authorize the user
+        "400":
+          description: Invalid code or state mismatch.
+        "401":
+          description: Authentication failed with Google.
+      summary: Google OAuth2 Callback
       tags:
       - Authentication
-  /v1/auth/social/apple:
+  /v1/auth/social/web/apple:
     post:
       description: Exchanges an Apple Identity Token for an EPA-issued JWT.
-      operationId: authenticate_with_apple
+      operationId: authenticate_with_apple_web
       requestBody:
         content:
           application/json:
@@ -181,18 +223,6 @@ components:
       - email
       - password
       title: LoginRequest
-      type: object
-    SocialTokenExchange:
-      example:
-        id_token: id_token
-      properties:
-        id_token:
-          description: Token from social provider SDK.
-          title: id_token
-          type: string
-      required:
-      - id_token
-      title: SocialTokenExchange
       type: object
     AppleTokenExchange:
       example:

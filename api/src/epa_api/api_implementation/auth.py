@@ -5,7 +5,11 @@ Functions are called here if their name is specified as
 an operationId in the OpenAPI specification.
 """
 
+from typing import Optional
+from pydantic import StrictStr
+
 from fastapi.exceptions import HTTPException
+from starlette.status import HTTP_400_BAD_REQUEST, HTTP_500_INTERNAL_SERVER_ERROR
 from epa_api.apis.authentication_api_base import BaseAuthenticationApi
 from epa_api.models.user_registration import UserRegistration
 from epa_api.models.user_created import UserCreated
@@ -14,8 +18,11 @@ from epa_api.models.auth_token import AuthToken
 from epa_api.api_implementation.utils.mongo import MongoUtils
 from epa_api.api_implementation.utils.user import UserUtils
 from epa_api.api_implementation.utils.token import TokenUtils
+from epa_api.api_implementation.utils.google import GoogleUtils
 from epa_api.api_implementation.utils.context import current_token_data
+from fastapi.responses import RedirectResponse
 from fastapi import status
+import urllib.parse
 
 class AuthAPIImplementation(BaseAuthenticationApi):
     async def register_new_user(self, user_registration: UserRegistration) -> UserCreated:
@@ -106,4 +113,44 @@ class AuthAPIImplementation(BaseAuthenticationApi):
             session_token=token.sub,
             token_type="Bearer",
             access_expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
-        )
+        )        
+        
+    async def authenticate_with_google_web(self):
+        # This will show errors since the open api generator cannot handle redirects
+        
+        # Send user to google login
+        url = f"{GoogleUtils.get_auth_endpoint()}?{urllib.parse.urlencode(GoogleUtils.get_query_params_web_request())}"
+        return RedirectResponse(url)
+        
+    async def google_callback(self, code: StrictStr, state: Optional[StrictStr], error: Optional[StrictStr]) -> AuthToken:
+        if not code:
+            raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail="Termination code missing")
+    
+        # Get the user's information
+        token_data = GoogleUtils.exchange_code_for_token(code)
+        user_info = GoogleUtils.get_google_user_info(token_data["access_token"])
+        
+        
+        # Connect to the database
+        client, db = MongoUtils.get_mongodb_database_connection()
+        user_collection = MongoUtils.get_user_collection(db)
+                
+        # Get the user's information on EPA, creating the user if they do not exist
+        user_object = UserUtils.get_user_from_google_id(user_info["id"], user_collection)
+        if not user_object:
+            user_id = UserUtils.create_google_user(user_info, user_collection)
+            user_object = UserUtils.get_user_from_user_id(user_id, user_collection)
+        if user_object is None:
+            raise HTTPException(status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve user after creation.")
+            
+        # Authorize the user with a session token
+        new_access_token = TokenUtils.generate_new_access_token(user_object, user_collection)
+        new_session_token = TokenUtils.generate_new_session_token(user_object, MongoUtils.get_session_tokens_collection(db))
+        client.close()
+        
+        return AuthToken(
+            access_token=new_access_token,
+            session_token=new_session_token,
+            token_type="Bearer",
+            access_expires_in=TokenUtils.get_ttl_in_seconds(TokenUtils.get_expire_date(new_access_token))
+        )        

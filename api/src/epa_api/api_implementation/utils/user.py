@@ -85,6 +85,26 @@ class UserUtils:
         
         user_collection.insert_one(user_object)
         return user_id
+        
+    @staticmethod
+    def create_google_user(user_info: Dict[Any, Any], user_collection: Collection) -> str:
+        """
+        Create a new google user. This user can only be logged in by Google.
+    
+        :raises ValueError if one of the expected env variables are not set
+        :return: The UUID of the user
+        """
+        
+        user_id = str(uuid.uuid4())
+        user_object = {
+            "user_id": user_id,
+            "username": user_info["email"],
+            "email": user_info["email"],
+            "google_id": user_info["id"]
+        }
+        
+        user_collection.insert_one(user_object)
+        return user_id
  
     @staticmethod          
     def get_user_from_email(email: str, user_collection: Collection) -> Dict[Any, Any] | None:
@@ -151,4 +171,18 @@ class UserUtils:
             return True
         else:
             return False
-        
+            
+    @staticmethod
+    def get_user_from_google_id(google_id: str, user_collection: Collection) -> Dict[Any, Any] | None:
+        """
+        Get user from a given google id. If the user does not exist, None is return.
+    
+        :param google_id: The google id of a possible user
+        :type google_id: str
+        :param user_collection: A Collection of users
+        :type user_collection: pymongo.collection.Collection
+        :return: The object representing the user
+        :rtype: Dict[Any, Any] | None
+        """    
+     
+        return user_collection.find_one({"google_id": google_id})

@@ -75,3 +75,16 @@ ___
 
 ---
 ## The EPA Moblie App
+
+---
+## Useful Commands
+
+Set environment variables from `.env`:
+```bash
+export $(grep -v '^#' .env | xargs)
+```
+
+Unset environment variables from `.env`:
+```bash
+unset $(grep -v '^#' .env | sed -E 's/(.*)=.*/\1/' | xargs)
+```
