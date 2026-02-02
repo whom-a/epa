@@ -17,8 +17,21 @@ The overview of EPA can appear as such:
 
 ![EPA System Architecture](./system_diagram/event-posting-app.png "EPA System Architecture")
 
----
-## The EPA API
+### System Architecture Choices
+
+Some chocies we want to highlight are the following:
+- **Contract First API**: The main EPA API uses a Contract First approach, so that we can always serve a client apporiately.
+- **Cache Aside Pattern**: The application focuses on a Cache Aside Pattern, meaning we cache posts for users for that access is faster. We include 2 caching layers, a client side and a server side.
+
+## Quick Start
+If you have Docker installed, then you can use the `docker compose` plugin for starting services:
+```bash
+docker compose up
+```
+
+Some microservices (like the cache_loader, notify_service) operate using AWS Serverless Application Model (see below)
+
+## The API
 
 The EPA API uses a Contract-First approach, meaning endpoints are auto generated from an OpenAPI spec using the `openapi-generator-cli` tool:
 
@@ -66,17 +79,49 @@ class EpaAPIImplementation(BaseDefaultApi):
         return Status(status="healthy", version="1.0.0")
 ```
 
----
 ## The Database
-The database uses MongoDB to store a `users` collection and `posts` collection.
+The database uses MongoDB for storing information such as `users`, `posts`, `session_tokens`, `categories`, and more.
 The database is initialized using a Python script and the `config.json` file found within the `./database` directory.
-You can spin up the database using `docker compose`. The initializer will add the needed collections from the `config.json` file.
+The database `docker-compose.yml` file includes a database initializer to add the defined collections.
+The default database is called `epa_database`. This cannot be configured
 
----
+### Configuration Syntax
+
+The configuration file uses JSON format syntax to define needed database collections.
+Some fields can be included to add indexes to MongoDB collections:
+```json
+{
+  "collections": [
+    {
+      "name": "users",
+      "indexes": [
+        {"field": "user_id", "unique": true},
+        {"field": "google_id", "unique": true}
+      ]
+    },
+    {
+      "name": "session_tokens",
+      "indexes": [
+        {"field": "session_token", "expireAfterSeconds": 604800},
+      ]
+    },
+  ]
+```
+
+- The `unqiue` field says that in this collection index, this field will always be unqiue.
+- The `expireAfterSeconds` field sats that in this collection index, this field will expire in some amount of time in seconds.
+
 ## User Timeline Caching
 To ensure a user can see a post very quickly, we preform caching on post and store them into a Redis database.
 The provider for this service is Upstash. You can locally test this database using the `docker-compose.yml` file in the
 `./user_timeline_post_cache` directory to simulate Upstash.
+
+### Connecting to the Cahce
+In both cases, local or production, you can use a redis client to connect to the redis database.
+Example in Go:
+```go
+
+```
 
 ---
 ## The Post Queue
