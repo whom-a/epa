@@ -31,6 +31,22 @@ docker compose up
 
 Some microservices (like the cache_loader, notify_service) operate using AWS Serverless Application Model (see below)
 
+## Useful Commands
+
+Set environment variables from `.env`:
+```bash
+export $(grep -v '^#' .env | xargs)
+```
+
+Unset environment variables from `.env`:
+```bash
+unset $(grep -v '^#' .env | sed -E 's/(.*)=.*/\1/' | xargs)
+```
+
+Run AWS Lambda function locally:
+```bash
+sudo sam build && sudo sam local invoke
+```
 ## The API
 
 The EPA API uses a Contract-First approach, meaning endpoints are auto generated from an OpenAPI spec using the `openapi-generator-cli` tool:
@@ -120,33 +136,65 @@ The provider for this service is Upstash. You can locally test this database usi
 In both cases, local or production, you can use a redis client to connect to the redis database.
 Example in Go:
 ```go
-
+func connectToRedis() *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr:     "epa-redis:6379",
+		Password: "",
+		DB:       0,
+	})
+}
 ```
 
----
 ## The Post Queue
+The post queue uses Kafka to store posts for later consumers to pick up (e.g post_ingestor, cache_loader).
+You can use `docker-compose` to spin up a local Kafka instance.
 
----
-## The Notifier
+The defined Kafka topics include:
+- `post-ingestor-consumer`
+- `cache-loader-consumer`
+- `notify-service-consumer`
 
----
-## The Post Ingestor
-
-___
-## The User Cache Loader
-
----
-## The EPA Moblie App
-
----
-## Useful Commands
-
-Set environment variables from `.env`:
+More Kafka topics can be added to the local instance by updating the `init.sh` script:
 ```bash
-export $(grep -v '^#' .env | xargs)
+/opt/kafka/bin/kafka-topics.sh --create --topic my-topic --bootstrap-server epa_kakfa_broker:9092
 ```
 
-Unset environment variables from `.env`:
+## The Notifier, The Post Ingestor, and The User Cache Loader
+These services are grouped together as they are all very similar.
+They run as AWS Lamdba functions and are triggered via Kafka Events.
+They all also use AWS SAM to be tested and deployed into the cloud.
+The only difference lies in that the post ingestor is written in Python, while the others are in Go.
+They can all be tested by executing:
 ```bash
-unset $(grep -v '^#' .env | sed -E 's/(.*)=.*/\1/' | xargs)
+sam build && sam local invoke
 ```
+You may need to use `sudo` if Docker premissions require it.
+
+The flow of the Lamdba functions are:
+- **The Notifier**: On Kafka event, for each record, for each user that pertains to this record, send them a moblie notification
+- **The Cache Loader**: On Kafka event, for each record, for each user that pertains to this record, update their cache line with that post
+- **The Post Ingestor**: On Kafka event, for each record, insert the record into the global database
+
+## Technical Resources
+
+### Frameworks & Languages
+
+* [FastAPI](https://fastapi.tiangolo.com/) - Modern, high-performance web framework for Python.
+* [Go (Golang)](https://go.dev/) - Statically typed, compiled language for efficient cloud services.
+* [Python](https://www.python.org/) - Primary language for the API and Ingestor.
+
+### Infrastructure & Tools
+
+* [AWS Lambda](https://aws.amazon.com/lambda/) - Serverless compute for event-driven tasks.
+* [AWS SAM (Serverless Application Model)](https://aws.amazon.com/serverless/sam/) - Toolkit for building serverless applications.
+* [Docker](https://www.docker.com/) - Containerization for local development.
+* [OpenAPI Generator](https://openapi-generator.tech/) - Tool for generating API clients and server stubs.
+
+### Databases & Messaging
+
+* [MongoDB](https://www.mongodb.com/) - NoSQL document database for primary storage.
+* [Redis](https://redis.io/) - In-memory data structure store used as a cache.
+* [Upstash](https://upstash.com/) - Serverless Redis provider used in production.
+* [Apache Kafka](https://kafka.apache.org/) - Distributed event streaming platform.
+
+---
